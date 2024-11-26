@@ -95,6 +95,29 @@ async function modificarProducto(data) {
     return productoModificado;
 }
 
+async function buscarProductosPorNombre(nombre) {
+    const productos = await productosBD.get();
+    const productosFiltrados = [];
+    productos.forEach(producto => {
+        const producto1 = new Producto({ id: producto.id, ...producto.data() });
+        if (producto1.getProducto.producto.toLowerCase().includes(nombre.toLowerCase())) {
+            productosFiltrados.push(producto1.getProducto);
+        }
+    });
+    return productosFiltrados;
+}
+async function sugerirProductos(nombre) {
+    const productos = await productosBD.get();
+    const productosSugeridos = [];
+    productos.forEach(producto => {
+        const producto1 = new Producto({ id: producto.id, ...producto.data() });
+        const nombreProducto = producto1.getProducto.producto.toLowerCase();
+        if (nombreProducto.startsWith(nombre.toLowerCase())) {
+            productosSugeridos.push(producto1.getProducto);
+        }
+    });
+    return productosSugeridos;
+}
 
 module.exports = {
     buscarPorID,
@@ -103,5 +126,7 @@ module.exports = {
     borraProducto,
     validarID,
     validarCantidad,
-    modificarProducto
+    modificarProducto,
+    buscarProductosPorNombre,
+    sugerirProductos
 }

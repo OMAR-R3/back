@@ -10,6 +10,33 @@ function validarDatos(usuario) {
     return valido;
 }
 
+async function login(req,usuario, password) {
+    //console.log(usuario);
+    var user={
+        usuario:"anonimo",
+        tipoUsuario:"sin acceso"
+    }
+    const usuariosCorrectos = await usuariosBD.where("usuario", "==", usuario).get();
+    //console.log(usuarioCorreccto.data);
+    usuariosCorrectos.forEach(usu => {
+        //console.log(usu.data());
+        const usuarioCorrecto=validarPassword(password,usu.data().password,usu.data().salt);
+        if(usuarioCorrecto){
+            user.usuario=usu.data().usuario;
+            if(usu.data().tipoUsuario=="usuario"){
+                req.session.usuario="usuario";
+                user.tipoUsuario=req.session.usuario;
+            }
+            else if(usu.data().tipoUsuario=="admin"){
+                req.session.admin="admin";
+                user.tipoUsuario=req.session.admin;
+            }
+        }
+    });
+    //console.log(user);
+    return user;
+}
+
 async function mostrarUsuarios() {
     const usuarios = await usuariosBD.get();
     usuariosValidos = [];
@@ -83,11 +110,39 @@ async function modificarUsuario(data) {
     return usuarioModificado;
 }
 
+async function buscarUsuariosPorNombre(nombre) {
+    const usuarios = await usuariosBD.get();
+    const usuariosFiltrados = [];
+    usuarios.forEach(usuario => {
+        const usuario1 = new Usuario({ id: usuario.id, ...usuario.data() });
+        if (usuario1.getUsuario.nombre.toLowerCase().includes(nombre.toLowerCase())) {
+            usuariosFiltrados.push(usuario1.getUsuario);
+        }
+    });
+    return usuariosFiltrados;
+}
+
+async function sugerirUsuarios(nombre) {
+    const usuarios = await usuariosBD.get();
+    const usuariosSugeridos = [];
+    usuarios.forEach(usuario => {
+        const usuario1 = new Usuario({ id: usuario.id, ...usuario.data() });
+        const nombreUsuario = usuario1.getUsuario.usuario.toLowerCase();
+        if (nombreUsuario.startsWith(nombre.toLowerCase())) {
+            usuariosSugeridos.push(usuario1.getUsuario);
+        }
+    });
+    return usuariosSugeridos;
+}
+
 module.exports = {
     buscarPorID,
     mostrarUsuarios,
     nuevoUsuario,
     borrarUsuario,
     validarID,
-    modificarUsuario
+    modificarUsuario,
+    login,
+    buscarUsuariosPorNombre,
+    sugerirUsuarios
 }

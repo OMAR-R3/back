@@ -1,5 +1,6 @@
 const { log } = require("console");
 var crypto = require("crypto");
+
 function encriptarPassword(password) {
     var salt=crypto.randomBytes(32).toString("hex");
     //console.log(sal);

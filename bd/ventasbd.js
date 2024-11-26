@@ -1,4 +1,7 @@
 const ventasbd = require("./conexion").ventas;
+
+const productosBD = require("./conexion").productos;
+const usuariosBD = require("./conexion").usuarios;
 const Venta = require("../modelos/VentaModelo");
 var { validarID, validarCantidad } = require("../bd/productosbd");
 var buscarUsuarios = require("../bd/usuariosbd").validarID;
@@ -15,23 +18,35 @@ async function validarDatos(venta) {
 
 
 async function mostrarVentas() {
-    const ventas = await ventasbd.get();
-    var ventasvalidas = [];
-    ventas.forEach(async (venta) => {
-        const venta1 = new Venta({ id: venta.id, ...venta.data() });
-        //console.log(await validarDatos(venta1.getVenta));
-        if (await validarDatos(venta1.getVenta)) {
-            //console.log("entra ");
-            //console.log(venta1.getVenta);
-            ventasvalidas.push(venta1.getVenta);
-            //console.log(ventasvalidas);
+    const ventasQuery = await ventasbd.where("estado", "==", "vendido").get();
+    const ventasValidas = [];
 
+    for (const ventaDoc of ventasQuery.docs) {
+        const ventaData = ventaDoc.data();
+
+        const productoDoc = await productosBD.doc(ventaData.id_producto).get();
+        const productoData = productoDoc.exists ? productoDoc.data() : null;
+
+        const usuarioDoc = await usuariosBD.doc(ventaData.id_usuario).get();
+        const usuarioData = usuarioDoc.exists ? usuarioDoc.data() : null;
+
+        if (productoData && usuarioData) {
+            const ventaConDetalles = {
+                id: ventaDoc.id,
+                cantidad: ventaData.cantidad,
+                estado: ventaData.estado,
+                fechayhora: ventaData.fechayhora,
+                producto: productoData.producto,
+                usuario: usuarioData.usuario,
+            };
+
+            ventasValidas.push(ventaConDetalles);
         }
-    });
-    //console.log(ventasvalidas);
+    }
 
-    return ventasvalidas;
+    return ventasValidas;
 }
+
 
 
 
@@ -82,7 +97,7 @@ async function modEstadoVenta(id) {
     var ventaCancelada = false;
     if (ventavalida) {
         await ventasbd.doc(id).update({
-            estado:"cancelado"
+            estado: "cancelado"
         });
         ventaCancelada = true;
     }
@@ -92,14 +107,30 @@ async function modEstadoVenta(id) {
 async function modificarVenta(data) {
     var ventaValida = await buscarPorID(data.id);
     var ventaModificada = false;
+
     if (ventaValida) {
-        await ventasbd.doc(data.id).update({
-            cantidad: data.cantidad
-        });
-        ventaModificada = true;
+        const actualizaciones = {};
+
+
+        if (data.cantidad !== undefined) {
+            actualizaciones.cantidad = data.cantidad;
+        }
+        if (data.id_usuario !== undefined) {
+            actualizaciones.id_usuario = data.id_usuario;
+        }
+        if (data.id_producto !== undefined) {
+            actualizaciones.id_producto = data.id_producto;
+        }
+
+        if (Object.keys(actualizaciones).length > 0) {
+            await ventasbd.doc(data.id).update(actualizaciones);
+            ventaModificada = true;
+        }
     }
+
     return ventaModificada;
 }
+
 
 module.exports = {
     buscarPorID,
